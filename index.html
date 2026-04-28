@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Siren Lab — Mechanical Rotary Siren Synthesizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <h1>SIREN<span class="accent">LAB</span></h1>
+      <p class="tagline">Mechanical Rotary Siren Synthesizer</p>
+    </div>
+    <div class="header-right">
+      <div id="safariWarning" class="safari-warning" style="display:none">
+        ⚠ Safari: recording will be WebM, not OGG
+      </div>
+      <div class="status-light" id="statusLight"></div>
+      <span class="status-text" id="statusText">OFFLINE</span>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ── VISUALIZERS ─────────────────────────────── -->
+    <section class="visualizers">
+
+      <div class="gauge-panel panel">
+        <div class="panel-label">RPM GAUGE</div>
+        <canvas id="gaugeCanvas" width="240" height="220"></canvas>
+      </div>
+
+      <div class="scope-panel panel">
+        <div class="panel-label">WAVEFORM</div>
+        <canvas id="scopeCanvas" width="440" height="150"></canvas>
+        <div class="readout-bar">
+          <div class="readout-item">
+            <span class="readout-label">FREQ</span>
+            <span class="readout-value" id="readFreq">— Hz</span>
+          </div>
+          <div class="readout-sep">·</div>
+          <div class="readout-item">
+            <span class="readout-label">NOTE</span>
+            <span class="readout-value" id="readNote">—</span>
+          </div>
+          <div class="readout-sep">·</div>
+          <div class="readout-item">
+            <span class="readout-label">RPM</span>
+            <span class="readout-value" id="readRPM">—</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ── CONTROLS ────────────────────────────────── -->
+    <section class="controls">
+      <div class="controls-grid">
+
+        <!-- DISK -->
+        <div class="control-group panel">
+          <div class="group-title">DISK</div>
+
+          <div class="slider-row">
+            <label>HOLES (RING 1)</label>
+            <input type="range" id="holes" min="1" max="24" step="1" value="6">
+            <span class="val" id="holesVal">6</span>
+          </div>
+
+          <div class="slider-row">
+            <label>HOLE SHAPE</label>
+            <div class="toggle-group">
+              <button class="toggle active" id="shapeRound" onclick="setHoleShape('round')">ROUND</button>
+              <button class="toggle" id="shapeSlot" onclick="setHoleShape('slot')">SLOT</button>
+            </div>
+          </div>
+
+          <div class="slider-row" id="skewRow">
+            <label>SLOT SKEW <span class="hint">(edge slope)</span></label>
+            <input type="range" id="slotSkew" min="0" max="100" step="1" value="50">
+            <span class="val" id="slotSkewVal">50%</span>
+          </div>
+
+          <div class="slider-row">
+            <label>DUTY CYCLE <span class="hint">(hole width)</span></label>
+            <input type="range" id="dutyCycle" min="5" max="95" step="1" value="50">
+            <span class="val" id="dutyCycleVal">50%</span>
+          </div>
+        </div>
+
+        <!-- RING 2 -->
+        <div class="control-group panel">
+          <div class="group-title">
+            SECOND RING
+            <label class="toggle-switch">
+              <input type="checkbox" id="ring2enabled" onchange="onRing2Toggle()">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div id="ring2body" class="dim">
+            <div class="slider-row">
+              <label>HOLES (RING 2)</label>
+              <input type="range" id="ring2holes" min="1" max="24" step="1" value="9">
+              <span class="val" id="ring2holesVal">9</span>
+            </div>
+            <p class="hint-block">Ring 2 shares the same disk & RPM but has a different hole count, creating a beating or chord effect.</p>
+          </div>
+        </div>
+
+        <!-- WAIL -->
+        <div class="control-group panel">
+          <div class="group-title">WAIL MODULATION</div>
+
+          <div class="slider-row">
+            <label>BASE RPM</label>
+            <input type="range" id="baseRPM" min="100" max="6000" step="10" value="1800">
+            <span class="val" id="baseRPMVal">1800</span>
+          </div>
+
+          <div class="slider-row">
+            <label>WAIL DEPTH</label>
+            <input type="range" id="wailDepth" min="0" max="3000" step="10" value="800">
+            <span class="val" id="wailDepthVal">800 RPM</span>
+          </div>
+
+          <div class="slider-row">
+            <label>WAIL RATE</label>
+            <input type="range" id="wailRate" min="5" max="300" step="1" value="50">
+            <span class="val" id="wailRateVal">0.50 Hz</span>
+          </div>
+
+          <div class="slider-row">
+            <label>WAIL SHAPE</label>
+            <div class="toggle-group">
+              <button class="toggle active" id="wailSine" onclick="setWailShape(0)">SINE</button>
+              <button class="toggle" id="wailTri"  onclick="setWailShape(1)">TRI</button>
+              <button class="toggle" id="wailSaw"  onclick="setWailShape(2)">SAW</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- OUTPUT -->
+        <div class="control-group panel">
+          <div class="group-title">OUTPUT</div>
+          <div class="slider-row">
+            <label>VOLUME</label>
+            <input type="range" id="volume" min="0" max="100" step="1" value="70">
+            <span class="val" id="volumeVal">70%</span>
+          </div>
+        </div>
+
+        <!-- REALISM EFFECTS -->
+        <div class="control-group panel">
+          <div class="group-title">REALISM EFFECTS</div>
+
+          <!-- 1. Turbulent Noise -->
+          <div class="effect-row">
+            <div class="effect-info">
+              <span class="effect-name">TURBULENT NOISE</span>
+              <span class="effect-desc">Broadband air noise scaled with RPM</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="fxNoise" onchange="setEffect('noise', this.checked)">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="slider-row dim" id="noiseAmountRow">
+            <label>NOISE AMOUNT</label>
+            <input type="range" id="noiseAmount" min="0" max="100" step="1" value="60">
+            <span class="val" id="noiseAmountVal">60%</span>
+          </div>
+
+          <div class="effect-divider"></div>
+
+          <!-- 2. Horn Coloration -->
+          <div class="effect-row">
+            <div class="effect-info">
+              <span class="effect-name">HORN COLORATION</span>
+              <span class="effect-desc">Resonant peaks at 700 / 2100 / 4400 Hz</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="fxHorn" onchange="setEffect('horn', this.checked)">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="slider-row dim" id="hornTuningRow">
+            <label>HORN TUNING <span class="hint">(shift peaks)</span></label>
+            <input type="range" id="hornTuning" min="-100" max="100" step="1" value="0">
+            <span class="val" id="hornTuningVal">+0%</span>
+          </div>
+
+          <div class="effect-divider"></div>
+
+          <!-- 3. Saturation -->
+          <div class="effect-row">
+            <div class="effect-info">
+              <span class="effect-name">SATURATION</span>
+              <span class="effect-desc">Soft-clip waveshaping (tanh)</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="fxSat" onchange="setEffect('sat', this.checked)">
+              <span class="switch-track"><span class="switch-thumb"></span></span>
+            </label>
+          </div>
+          <div class="slider-row dim" id="satDriveRow">
+            <label>DRIVE</label>
+            <input type="range" id="satDrive" min="0.5" max="8" step="0.1" value="3">
+            <span class="val" id="satDriveVal">3.0x</span>
+          </div>
+
+        </div><!-- /effects panel -->
+
+      </div><!-- /controls-grid -->
+
+      <!-- PRESETS -->
+      <div class="presets-bar panel">
+        <span class="presets-label">PRESETS</span>
+        <button class="preset-btn" onclick="loadPreset('airRaid')">AIR RAID</button>
+        <button class="preset-btn" onclick="loadPreset('policeYelp')">POLICE YELP</button>
+        <button class="preset-btn" onclick="loadPreset('european')">EUROPEAN</button>
+        <button class="preset-btn" onclick="loadPreset('tornado')">TORNADO</button>
+        <button class="preset-btn" onclick="loadPreset('steady')">STEADY TONE</button>
+        <button class="preset-btn" onclick="loadPreset('chord')">CHORD</button>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="actions-bar">
+        <button class="action-btn play-btn" id="playBtn" onclick="togglePlay()">▶ PLAY</button>
+        <button class="action-btn pitch-btn" onclick="pitchLock()" title="Snap base RPM to nearest musical note">♩ PITCH LOCK</button>
+        <div class="record-group">
+          <select id="recDuration" class="rec-select">
+            <option value="2">2 s</option>
+            <option value="5" selected>5 s</option>
+            <option value="10">10 s</option>
+            <option value="20">20 s</option>
+          </select>
+          <button class="action-btn rec-btn" id="recBtn" onclick="startRecording()">⏺ RECORD</button>
+        </div>
+        <span class="rec-status" id="recStatus"></span>
+      </div>
+
+    </section>
+
+  </main>
+
+  <footer>
+    <p>SIREN LAB · Web Audio API · <a href="https://en.wikipedia.org/wiki/Siren_(alarm)" target="_blank">How sirens work</a></p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
