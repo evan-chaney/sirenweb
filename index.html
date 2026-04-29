@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Siren Lab — Mechanical Rotary Siren Synthesizer</title>
+  <title>Siren Lab — Siren Synthesizer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
@@ -13,12 +13,10 @@
   <header>
     <div class="header-left">
       <h1>SIREN<span class="accent">LAB</span></h1>
-      <p class="tagline">Mechanical Rotary Siren Synthesizer</p>
+      <p class="tagline" id="tagline">Mechanical Rotary Siren Synthesizer</p>
     </div>
     <div class="header-right">
-      <div id="safariWarning" class="safari-warning" style="display:none">
-        ⚠ Safari: recording will be WebM, not OGG
-      </div>
+      <div id="safariWarning" class="safari-warning" style="display:none">⚠ Safari: recording will be WebM</div>
       <div class="status-light" id="statusLight"></div>
       <span class="status-text" id="statusText">OFFLINE</span>
     </div>
@@ -26,14 +24,12 @@
 
   <main>
 
-    <!-- ── VISUALIZERS ─────────────────────────────── -->
+    <!-- ── VISUALIZERS ──────────────────────────── -->
     <section class="visualizers">
-
       <div class="gauge-panel panel">
         <div class="panel-label">RPM GAUGE</div>
         <canvas id="gaugeCanvas" width="240" height="220"></canvas>
       </div>
-
       <div class="scope-panel panel">
         <div class="panel-label">WAVEFORM</div>
         <canvas id="scopeCanvas" width="440" height="150"></canvas>
@@ -54,37 +50,111 @@
           </div>
         </div>
       </div>
-
     </section>
 
-    <!-- ── CONTROLS ────────────────────────────────── -->
+    <!-- ── MATH FORMULA PANEL ───────────────────── -->
+    <section class="math-panel panel">
+      <div class="panel-label">LIVE FORMULA</div>
+      <div class="math-body">
+
+        <!-- Mechanical / Q2 / Electronic formula -->
+        <div class="math-row math-primary" id="mathMechanical">
+          <span class="math-sym">f</span>
+          <span class="math-op">=</span>
+          <span class="math-var m-holes" id="mHoles">6</span>
+          <span class="math-op">×</span>
+          <span class="math-var m-rpm" id="mRPM">1,800</span>
+          <span class="math-op">÷ 60</span>
+          <span class="math-op">=</span>
+          <span class="math-result" id="mFreq">180.0 Hz</span>
+          <span class="math-note" id="mNote">≈ F♯3</span>
+        </div>
+        <div class="math-row math-secondary" id="mathStats">
+          <span class="math-stat"><span class="sl">T</span> = <span id="mPeriod">5.6 ms</span></span>
+          <span class="math-dot">·</span>
+          <span class="math-stat"><span class="sl">OPEN</span> = <span id="mOpen">2.8 ms</span></span>
+          <span class="math-dot">·</span>
+          <span class="math-stat"><span class="sl">DISK PERIOD</span> = <span id="mDisk">33.3 ms/rev</span></span>
+        </div>
+        <div class="math-row math-ring2-row" id="mathRing2Row" style="display:none">
+          <span class="math-stat"><span class="sl">RING 1</span> = <span id="mR1">180.0 Hz</span></span>
+          <span class="math-dot">·</span>
+          <span class="math-stat"><span class="sl">RING 2</span> = <span id="mR2">270.0 Hz</span></span>
+          <span class="math-dot">·</span>
+          <span class="math-stat beat"><span class="sl">BEAT</span> = <span id="mBeat">90.0 Hz</span></span>
+        </div>
+
+        <!-- Two-tone formula (hidden unless twotone mode) -->
+        <div class="math-row math-primary" id="mathTwoTone" style="display:none">
+          <span class="math-stat"><span class="sl">LO</span> = <span class="math-result" id="mTTLo">500 Hz</span></span>
+          <span class="math-dot">|</span>
+          <span class="math-stat"><span class="sl">HI</span> = <span class="math-result" id="mTTHi">660 Hz</span></span>
+          <span class="math-dot">|</span>
+          <span class="math-stat"><span class="sl">INTERVAL</span> = <span id="mTTInterval">480 ¢</span></span>
+          <span class="math-dot">|</span>
+          <span class="math-active" id="mTTActive">LO ▶</span>
+        </div>
+        <div class="math-row math-secondary" id="mathTwoToneStats" style="display:none">
+          <span class="math-stat"><span class="sl">LO DUR</span> = <span id="mTTLoDur">500 ms</span></span>
+          <span class="math-dot">·</span>
+          <span class="math-stat"><span class="sl">HI DUR</span> = <span id="mTTHiDur">500 ms</span></span>
+          <span class="math-dot">·</span>
+          <span class="math-stat"><span class="sl">GAP</span> = <span id="mTTGap">0 ms</span></span>
+          <span class="math-dot">·</span>
+          <span class="math-stat"><span class="sl">CYCLE</span> = <span id="mTTCycle">1000 ms</span></span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── CONTROLS ─────────────────────────────── -->
     <section class="controls">
+
+      <!-- Mode Selector -->
+      <div class="mode-selector panel">
+        <span class="mode-label">SYNTHESIS MODE</span>
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="modeTab_mechanical" onclick="setSynthMode('mechanical')">
+            <span class="mode-tab-name">MECHANICAL</span>
+            <span class="mode-tab-sub">Pulse train · rotary disk</span>
+          </button>
+          <button class="mode-tab" id="modeTab_q2" onclick="setSynthMode('q2')">
+            <span class="mode-tab-name">Q2</span>
+            <span class="mode-tab-sub">Federal Signal Q2</span>
+          </button>
+          <button class="mode-tab" id="modeTab_electronic" onclick="setSynthMode('electronic')">
+            <span class="mode-tab-name">ELECTRONIC</span>
+            <span class="mode-tab-sub">Oscillator · horn speaker</span>
+          </button>
+          <button class="mode-tab" id="modeTab_twotone" onclick="setSynthMode('twotone')">
+            <span class="mode-tab-name">TWO-TONE</span>
+            <span class="mode-tab-sub">Hi-Lo alternating</span>
+          </button>
+        </div>
+      </div>
+
       <div class="controls-grid">
 
-        <!-- DISK -->
-        <div class="control-group panel">
+        <!-- ── DISK (mechanical / q2 / electronic) ── -->
+        <div class="control-group panel" id="panelDisk">
           <div class="group-title">DISK</div>
-
           <div class="slider-row">
             <label>HOLES (RING 1)</label>
             <input type="range" id="holes" min="1" max="24" step="1" value="6">
             <span class="val" id="holesVal">6</span>
           </div>
-
           <div class="slider-row">
             <label>HOLE SHAPE</label>
             <div class="toggle-group">
               <button class="toggle active" id="shapeRound" onclick="setHoleShape('round')">ROUND</button>
-              <button class="toggle" id="shapeSlot" onclick="setHoleShape('slot')">SLOT</button>
+              <button class="toggle"        id="shapeSlot"  onclick="setHoleShape('slot')">SLOT</button>
             </div>
           </div>
-
           <div class="slider-row" id="skewRow">
             <label>SLOT SKEW <span class="hint">(edge slope)</span></label>
             <input type="range" id="slotSkew" min="0" max="100" step="1" value="50">
             <span class="val" id="slotSkewVal">50%</span>
           </div>
-
           <div class="slider-row">
             <label>DUTY CYCLE <span class="hint">(hole width)</span></label>
             <input type="range" id="dutyCycle" min="5" max="95" step="1" value="50">
@@ -92,8 +162,8 @@
           </div>
         </div>
 
-        <!-- RING 2 -->
-        <div class="control-group panel">
+        <!-- ── RING 2 (mechanical only) ── -->
+        <div class="control-group panel" id="panelRing2">
           <div class="group-title">
             SECOND RING
             <label class="toggle-switch">
@@ -107,44 +177,40 @@
               <input type="range" id="ring2holes" min="1" max="24" step="1" value="9">
               <span class="val" id="ring2holesVal">9</span>
             </div>
-            <p class="hint-block">Ring 2 shares the same disk & RPM but has a different hole count, creating a beating or chord effect.</p>
+            <p class="hint-block">Ring 2 shares the same disk & RPM but a different hole count, creating beating or chord effects.</p>
           </div>
         </div>
 
-        <!-- WAIL -->
-        <div class="control-group panel">
+        <!-- ── WAIL (mechanical / electronic) ── -->
+        <div class="control-group panel" id="panelWail">
           <div class="group-title">WAIL MODULATION</div>
-
           <div class="slider-row">
             <label>BASE RPM</label>
             <input type="range" id="baseRPM" min="100" max="6000" step="10" value="1800">
             <span class="val" id="baseRPMVal">1800</span>
           </div>
-
           <div class="slider-row">
             <label>WAIL DEPTH</label>
             <input type="range" id="wailDepth" min="0" max="3000" step="10" value="800">
             <span class="val" id="wailDepthVal">800 RPM</span>
           </div>
-
           <div class="slider-row">
             <label>WAIL RATE</label>
             <input type="range" id="wailRate" min="5" max="300" step="1" value="50">
             <span class="val" id="wailRateVal">0.50 Hz</span>
           </div>
-
           <div class="slider-row">
             <label>WAIL SHAPE</label>
             <div class="toggle-group">
               <button class="toggle active" id="wailSine" onclick="setWailShape(0)">SINE</button>
-              <button class="toggle" id="wailTri"  onclick="setWailShape(1)">TRI</button>
-              <button class="toggle" id="wailSaw"  onclick="setWailShape(2)">SAW</button>
+              <button class="toggle"        id="wailTri"  onclick="setWailShape(1)">TRI</button>
+              <button class="toggle"        id="wailSaw"  onclick="setWailShape(2)">SAW</button>
             </div>
           </div>
         </div>
 
-        <!-- OUTPUT -->
-        <div class="control-group panel">
+        <!-- ── OUTPUT (always) ── -->
+        <div class="control-group panel" id="panelOutput">
           <div class="group-title">OUTPUT</div>
           <div class="slider-row">
             <label>VOLUME</label>
@@ -153,11 +219,10 @@
           </div>
         </div>
 
-        <!-- REALISM EFFECTS -->
-        <div class="control-group panel">
+        <!-- ── REALISM EFFECTS (always) ── -->
+        <div class="control-group panel" id="panelEffects">
           <div class="group-title">REALISM EFFECTS</div>
 
-          <!-- 1. Turbulent Noise -->
           <div class="effect-row">
             <div class="effect-info">
               <span class="effect-name">TURBULENT NOISE</span>
@@ -173,10 +238,8 @@
             <input type="range" id="noiseAmount" min="0" max="100" step="1" value="60">
             <span class="val" id="noiseAmountVal">60%</span>
           </div>
-
           <div class="effect-divider"></div>
 
-          <!-- 2. Horn Coloration -->
           <div class="effect-row">
             <div class="effect-info">
               <span class="effect-name">HORN COLORATION</span>
@@ -192,10 +255,8 @@
             <input type="range" id="hornTuning" min="-100" max="100" step="1" value="0">
             <span class="val" id="hornTuningVal">+0%</span>
           </div>
-
           <div class="effect-divider"></div>
 
-          <!-- 3. Saturation -->
           <div class="effect-row">
             <div class="effect-info">
               <span class="effect-name">SATURATION</span>
@@ -209,15 +270,108 @@
           <div class="slider-row dim" id="satDriveRow">
             <label>DRIVE</label>
             <input type="range" id="satDrive" min="0.5" max="8" step="0.1" value="3">
-            <span class="val" id="satDriveVal">3.0x</span>
+            <span class="val" id="satDriveVal">3.0×</span>
           </div>
+        </div>
 
-        </div><!-- /effects panel -->
+        <!-- ── Q2 MODE CONTROLS (q2 only) ── -->
+        <div class="control-group panel" id="panelQ2" style="display:none">
+          <div class="group-title">Q2 OPERATING MODE</div>
+          <div class="q2-mode-bar">
+            <button class="q2-btn active" id="q2Wail"     onclick="setQ2Mode('wail')">WAIL</button>
+            <button class="q2-btn"        id="q2Yelp"     onclick="setQ2Mode('yelp')">YELP</button>
+            <button class="q2-btn"        id="q2Phaser"   onclick="setQ2Mode('phaser')">PHASER</button>
+            <button class="q2-btn"        id="q2Priority" onclick="setQ2Mode('priority')">PRIORITY</button>
+          </div>
+          <p class="q2-desc" id="q2Desc">Slow sine sweep · 0.4 Hz · Classic air-raid wail</p>
+          <div class="slider-row" id="q2PhaserRow" style="opacity:0.3;pointer-events:none">
+            <label>PHASER DEPTH <span class="hint">(rotor modulation)</span></label>
+            <input type="range" id="q2PhaserDepth" min="0" max="100" step="1" value="60">
+            <span class="val" id="q2PhaserDepthVal">60%</span>
+          </div>
+          <div class="slider-row" id="q2PriorityRow" style="opacity:0.3;pointer-events:none">
+            <label>CYCLE TIME <span class="hint">(wail/yelp each)</span></label>
+            <input type="range" id="q2CycleTime" min="1" max="10" step="0.5" value="3">
+            <span class="val" id="q2CycleTimeVal">3.0 s</span>
+          </div>
+          <p class="hint-block">Disk: 6 holes · round · 50% duty. Wail parameters are set by mode.</p>
+        </div>
+
+        <!-- ── ELECTRONIC SETTINGS (electronic only) ── -->
+        <div class="control-group panel" id="panelElectronic" style="display:none">
+          <div class="group-title">HORN SPEAKER MODEL</div>
+          <div class="slider-row">
+            <label>PEAK 1 <span class="hint">(low resonance)</span></label>
+            <input type="range" id="elecPeak1" min="300" max="1200" step="10" value="580">
+            <span class="val" id="elecPeak1Val">580 Hz</span>
+          </div>
+          <div class="slider-row">
+            <label>PEAK 2 <span class="hint">(high resonance)</span></label>
+            <input type="range" id="elecPeak2" min="800" max="3000" step="10" value="1850">
+            <span class="val" id="elecPeak2Val">1850 Hz</span>
+          </div>
+          <div class="slider-row">
+            <label>HUM <span class="hint">(60 Hz power)</span></label>
+            <input type="range" id="elecHum" min="0" max="100" step="1" value="20">
+            <span class="val" id="elecHumVal">20%</span>
+          </div>
+          <div class="elec-presets">
+            <span class="presets-label">HORN MODEL</span>
+            <button class="preset-btn" onclick="loadElecPreset('federal3900')">FEDERAL 3900</button>
+            <button class="preset-btn" onclick="loadElecPreset('whelen')">WHELEN WS295</button>
+            <button class="preset-btn" onclick="loadElecPreset('generic')">GENERIC</button>
+          </div>
+          <p class="hint-block">Sine oscillator → speaker horn BPFs. Use Wail Modulation to set frequency and sweep.</p>
+        </div>
+
+        <!-- ── TWO-TONE SETTINGS (twotone only) ── -->
+        <div class="control-group panel" id="panelTwoTone" style="display:none">
+          <div class="group-title">TWO-TONE SETTINGS</div>
+          <div class="slider-row">
+            <label>LOW FREQ</label>
+            <input type="range" id="ttLowHz" min="200" max="1000" step="1" value="500">
+            <span class="val" id="ttLowHzVal">500 Hz</span>
+          </div>
+          <div class="slider-row">
+            <label>HIGH FREQ</label>
+            <input type="range" id="ttHighHz" min="300" max="1500" step="1" value="660">
+            <span class="val" id="ttHighHzVal">660 Hz</span>
+          </div>
+          <div class="slider-row">
+            <label>LOW DURATION</label>
+            <input type="range" id="ttLowDur" min="100" max="2000" step="10" value="500">
+            <span class="val" id="ttLowDurVal">500 ms</span>
+          </div>
+          <div class="slider-row">
+            <label>HIGH DURATION</label>
+            <input type="range" id="ttHighDur" min="100" max="2000" step="10" value="500">
+            <span class="val" id="ttHighDurVal">500 ms</span>
+          </div>
+          <div class="slider-row">
+            <label>GAP <span class="hint">(silence between)</span></label>
+            <input type="range" id="ttGap" min="0" max="200" step="5" value="0">
+            <span class="val" id="ttGapVal">0 ms</span>
+          </div>
+          <div class="slider-row">
+            <label>TRANSITION</label>
+            <div class="toggle-group">
+              <button class="toggle active" id="ttHard" onclick="setTTTransition('hard')">HARD CUT</button>
+              <button class="toggle"        id="ttSoft" onclick="setTTTransition('soft')">SOFT</button>
+            </div>
+          </div>
+          <div class="tt-country-bar">
+            <span class="presets-label">COUNTRY</span>
+            <button class="preset-btn" onclick="loadTTCountry('uk')">UK</button>
+            <button class="preset-btn" onclick="loadTTCountry('ukyam')">UK YAM</button>
+            <button class="preset-btn" onclick="loadTTCountry('france')">FRANCE</button>
+            <button class="preset-btn" onclick="loadTTCountry('germany')">GERMANY</button>
+          </div>
+        </div>
 
       </div><!-- /controls-grid -->
 
-      <!-- PRESETS -->
-      <div class="presets-bar panel">
+      <!-- PRESETS (mechanical mode only) -->
+      <div class="presets-bar panel" id="presetsBar">
         <span class="presets-label">PRESETS</span>
         <button class="preset-btn" onclick="loadPreset('airRaid')">AIR RAID</button>
         <button class="preset-btn" onclick="loadPreset('policeYelp')">POLICE YELP</button>
@@ -230,7 +384,7 @@
       <!-- ACTIONS -->
       <div class="actions-bar">
         <button class="action-btn play-btn" id="playBtn" onclick="togglePlay()">▶ PLAY</button>
-        <button class="action-btn pitch-btn" onclick="pitchLock()" title="Snap base RPM to nearest musical note">♩ PITCH LOCK</button>
+        <button class="action-btn pitch-btn" id="pitchBtn" onclick="pitchLock()" title="Snap to nearest musical note">♩ PITCH LOCK</button>
         <div class="record-group">
           <select id="recDuration" class="rec-select">
             <option value="2">2 s</option>
@@ -244,11 +398,10 @@
       </div>
 
     </section>
-
   </main>
 
   <footer>
-    <p>SIREN LAB · Web Audio API · <a href="https://en.wikipedia.org/wiki/Siren_(alarm)" target="_blank">How sirens work</a></p>
+    <p>SIREN LAB · Web Audio API · <a href="https://en.wikipedia.org/wiki/Siren_(alarm)" target="_blank">How sirens work</a> · <a href="https://en.wikipedia.org/wiki/Federal_Signal_Corporation" target="_blank">Federal Signal Q2</a></p>
   </footer>
 
   <script src="app.js"></script>
